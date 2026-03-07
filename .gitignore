@@ -42,3 +42,6 @@ local.settings.json
 
 # IDE
 .vscode/settings.json
+
+# Epub conversions
+conversions/
