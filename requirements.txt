@@ -1,0 +1,8 @@
+trafilatura==1.12.2
+readability-lxml==0.8.1
+playwright==1.51.0
+ebooklib==0.18
+Pillow==11.1.0
+lxml==5.3.1
+click==8.1.8
+ruff==0.9.10

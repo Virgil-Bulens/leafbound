@@ -52,3 +52,6 @@ fi
 
 # claude shorthand: p <prompt>
 append_if_missing 'p() { claude -p "$*" --model claude-haiku-4-5-20251001 --output-format text; }' ~/.zshrc
+
+# uv
+uv pip install -r requirements.txt -r requirements-dev.txt --system --no-deps
