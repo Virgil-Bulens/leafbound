@@ -5,10 +5,13 @@ import re
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
+import trafilatura
 from lxml import etree
 from readability import Document
 
 logger = logging.getLogger(__name__)
+
+_MIN_BODY_WORDS = 200
 
 
 @dataclass
@@ -22,21 +25,42 @@ class ArticleMetadata:
 
 def extract(html: str, url: str) -> Tuple[ArticleMetadata, Optional[str]]:
     """Extract article body and metadata from raw HTML."""
+    body_html: Optional[str] = None
+    readable_title = ""
+
+    # Try readability first
     try:
         doc = Document(html)
-        body_html = doc.summary(html_partial=True)
+        candidate = doc.summary(html_partial=True)
         readable_title = doc.title()
+        if candidate and _word_count_html(candidate) >= _MIN_BODY_WORDS:
+            body_html = candidate
     except Exception as exc:
         logger.debug("readability extraction failed: %s", exc)
-        return ArticleMetadata(), None
+
+    # Fall back to trafilatura HTML extraction if readability is thin
+    if body_html is None:
+        logger.debug("readability body thin, falling back to trafilatura HTML extraction")
+        tf_html = trafilatura.extract(
+            html,
+            output_format="html",
+            include_images=True,
+            include_links=False,
+        )
+        if tf_html:
+            body_html = tf_html
 
     if not body_html:
         return ArticleMetadata(), None
 
     metadata = _extract_metadata(html, url, readable_title)
-    metadata.word_count = len(re.sub(r"<[^>]+>", " ", body_html).split())
+    metadata.word_count = _word_count_html(body_html)
 
     return metadata, body_html
+
+
+def _word_count_html(html: str) -> int:
+    return len(re.sub(r"<[^>]+>", " ", html).split())
 
 
 def _extract_metadata(html: str, url: str, fallback_title: str) -> ArticleMetadata:
@@ -74,11 +98,7 @@ def _extract_metadata(html: str, url: str, fallback_title: str) -> ArticleMetada
         or fallback_title
         or h1_text
     )
-    meta.author = (
-        og_author
-        or _jld_author(jld)
-        or std_author
-    )
+    meta.author = og_author or _jld_author(jld) or std_author
     meta.date = (
         og_date
         or jld.get("datePublished")
