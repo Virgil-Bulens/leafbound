@@ -45,3 +45,6 @@ local.settings.json
 
 # Epub conversions
 conversions/
+
+# Claude
+.claude/
