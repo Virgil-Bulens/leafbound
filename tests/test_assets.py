@@ -8,7 +8,6 @@ from src.assets import (
     ImageStats,
     _fetch_image,
     _resolve_url,
-    _to_data_uri,
     process_assets,
 )
 
@@ -39,11 +38,6 @@ def test_resolve_url_relative():
 def test_resolve_url_empty():
     assert _resolve_url("", "https://example.com") == ""
 
-
-def test_to_data_uri():
-    data = b"hello"
-    uri = _to_data_uri(data, "image/jpeg")
-    assert uri.startswith("data:image/jpeg;base64,")
 
 
 def test_fetch_image_returns_jpeg_bytes():
@@ -98,7 +92,7 @@ def test_fetch_image_empty_url_returns_none():
 
 def test_process_assets_no_images(config):
     html = "<p>No images here, just plain text content.</p>"
-    result_html, stats = process_assets(html, "https://example.com", config, False)
+    result_html, stats, items = process_assets(html, "https://example.com", config, False)
     assert isinstance(result_html, str)
     assert stats.embedded == 0
     assert stats.placeholders == 0
@@ -109,18 +103,21 @@ def test_process_assets_embeds_image(config):
     html = '<p>Text</p><img src="https://example.com/photo.jpg" alt="photo"/>'
 
     with patch("src.assets._fetch_image", return_value=(jpeg, "image/jpeg")):
-        result_html, stats = process_assets(html, "https://example.com", config, False)
+        result_html, stats, items = process_assets(html, "https://example.com", config, False)
 
     assert stats.embedded == 1
     assert stats.placeholders == 0
-    assert "data:image/jpeg;base64," in result_html
+    assert len(items) == 1
+    fname = next(iter(items))
+    assert fname.startswith("images/") and fname.endswith(".jpg")
+    assert fname in result_html
 
 
 def test_process_assets_placeholder_on_failure(config):
     html = '<p>Text</p><img src="https://example.com/broken.jpg" alt="broken"/>'
 
     with patch("src.assets._fetch_image", return_value=None):
-        result_html, stats = process_assets(html, "https://example.com", config, False)
+        result_html, stats, items = process_assets(html, "https://example.com", config, False)
 
     assert stats.placeholders == 1
     assert stats.embedded == 0
@@ -133,12 +130,12 @@ def test_process_assets_respects_size_cap(config):
     html = '<img src="https://example.com/a.jpg"/>'
 
     with patch("src.assets._fetch_image", return_value=(jpeg, "image/jpeg")):
-        _, stats = process_assets(html, "https://example.com", config, False)
+        _, stats, _ = process_assets(html, "https://example.com", config, False)
 
     assert stats.placeholders == 1
     assert stats.embedded == 0
 
 
 def test_process_assets_returns_image_stats_type(config):
-    _, stats = process_assets("<p>text</p>", "https://example.com", config, False)
+    _, stats, _ = process_assets("<p>text</p>", "https://example.com", config, False)
     assert isinstance(stats, ImageStats)

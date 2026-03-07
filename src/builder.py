@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from ebooklib import epub
 
-from .assets import ImageStats
+from .assets import ImageItems, ImageStats
 from .extract import ArticleMetadata
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,7 @@ def build_epub(
     body_html: str,
     metadata: ArticleMetadata,
     image_stats: ImageStats,
+    image_items: ImageItems,
     config,
 ) -> bytes:
     """Assemble and return EPUB3 bytes."""
@@ -46,6 +47,15 @@ def build_epub(
         content=css_content.encode(),
     )
     book.add_item(css_item)
+
+    for fname, (img_bytes, mime) in image_items.items():
+        img_item = epub.EpubItem(
+            uid=fname.replace("/", "-").replace(".", "-"),
+            file_name=fname,
+            media_type=mime,
+            content=img_bytes,
+        )
+        book.add_item(img_item)
 
     chapter = epub.EpubHtml(title=metadata.title or "Article", file_name="article.xhtml", lang="en")
     chapter.content = _wrap_html(body_html, metadata, reading_time_str)

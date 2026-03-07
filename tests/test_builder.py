@@ -16,7 +16,7 @@ def _make_epub(title="Test Article", author="Test Author", date="2024-01-01",
     )
     stats = ImageStats(embedded=2, placeholders=1)
     cfg = ConversionConfig()
-    return build_epub(body, metadata, stats, cfg)
+    return build_epub(body, metadata, stats, {}, cfg)
 
 
 def test_build_epub_returns_bytes():

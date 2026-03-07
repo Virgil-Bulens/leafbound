@@ -1,5 +1,4 @@
 """Image download, Pillow processing, and table/SVG rasterization."""
-import base64
 import io
 import logging
 import urllib.parse
@@ -28,21 +27,30 @@ class ImageStats:
     placeholders: int = 0
 
 
+# Maps epub-relative filename -> (bytes, mime_type)
+ImageItems = dict[str, Tuple[bytes, str]]
+
+
 def process_assets(
     body_html: str,
     base_url: str,
     config,
     used_browser: bool,
-) -> Tuple[str, ImageStats]:
-    """Download/process images and rasterize tables and SVGs. Returns modified HTML and stats."""
+) -> Tuple[str, ImageStats, ImageItems]:
+    """Download/process images and rasterize tables and SVGs.
+
+    Returns (body_html, stats, image_items) where image_items maps
+    epub-relative filenames to (bytes, mime) for inclusion in the manifest.
+    """
     stats = ImageStats()
+    image_items: ImageItems = {}
     tree = etree.fromstring(f"<div>{body_html}</div>".encode(), etree.HTMLParser())
     root = tree.find(".//body/div")
     if root is None:
         root = tree
 
     # Rasterize tables and SVGs first
-    root = _rasterize_elements(root, base_url, config, used_browser)
+    root = _rasterize_elements(root, base_url, config, used_browser, image_items, stats)
 
     # Convert trafilatura <graphic> tags to <img>
     for el in root.findall(".//graphic"):
@@ -55,7 +63,7 @@ def process_assets(
     # Process images
     img_els = root.findall(".//img")
     if img_els:
-        embedded_data: dict[int, Optional[Tuple[bytes, str]]] = {}
+        fetched: dict[int, Optional[Tuple[bytes, str]]] = {}
         with ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
             futures = {
                 pool.submit(_fetch_image, _resolve_url(el.get("src", ""), base_url)): (i, el)
@@ -65,11 +73,10 @@ def process_assets(
             for future in as_completed(futures):
                 idx, el = futures[future]
                 try:
-                    result = future.result(timeout=_IMAGE_TIMEOUT + 1)
-                    embedded_data[idx] = result
+                    fetched[idx] = future.result(timeout=_IMAGE_TIMEOUT + 1)
                 except Exception as exc:
                     logger.debug("Image future error: %s", exc)
-                    embedded_data[idx] = None
+                    fetched[idx] = None
 
         cumulative_bytes = 0
         max_bytes = config.max_image_size_mb * 1024 * 1024
@@ -78,7 +85,7 @@ def process_assets(
             if not el.get("src"):
                 continue
             original_src = el.get("src", "")
-            result = embedded_data.get(i)
+            result = fetched.get(i)
             if result is None:
                 _replace_with_placeholder(el, original_src, "Failed to load")
                 stats.placeholders += 1
@@ -91,15 +98,17 @@ def process_assets(
                 continue
 
             cumulative_bytes += len(img_bytes)
-            data_uri = _to_data_uri(img_bytes, mime)
-            el.set("src", data_uri)
+            ext = "jpg" if mime == "image/jpeg" else "png"
+            fname = f"images/img-{len(image_items):04d}.{ext}"
+            image_items[fname] = (img_bytes, mime)
+            el.set("src", fname)
             el.attrib.pop("srcset", None)
             el.attrib.pop("srcSet", None)
             el.attrib.pop("loading", None)
             stats.embedded += 1
 
     result_html = etree.tostring(root, encoding="unicode", method="html")
-    return result_html, stats
+    return result_html, stats, image_items
 
 
 def _graphic_to_img(el: etree._Element, base_url: str) -> None:
@@ -168,7 +177,12 @@ def _best_srcset_url(srcset: str) -> str:
 
 
 def _rasterize_elements(
-    root: etree._Element, base_url: str, config, used_browser: bool
+    root: etree._Element,
+    base_url: str,
+    config,
+    used_browser: bool,
+    image_items: ImageItems,
+    stats: ImageStats,
 ) -> etree._Element:
     """Rasterize <table> and <svg> elements using Playwright screenshots."""
     tables = root.findall(".//table")
@@ -186,7 +200,7 @@ def _rasterize_elements(
             try:
                 page = browser.new_page(viewport={"width": 1200, "height": 800})
                 for el, el_type in elements:
-                    _rasterize_one(page, el, el_type, config)
+                    _rasterize_one(page, el, el_type, config, image_items, stats)
             finally:
                 browser.close()
     except Exception as exc:
@@ -195,7 +209,14 @@ def _rasterize_elements(
     return root
 
 
-def _rasterize_one(page, el: etree._Element, el_type: str, config) -> None:
+def _rasterize_one(
+    page,
+    el: etree._Element,
+    el_type: str,
+    config,
+    image_items: ImageItems,
+    stats: ImageStats,
+) -> None:
     """Screenshot a single element and replace it with an <img>."""
     try:
         el_html = etree.tostring(el, encoding="unicode", method="html")
@@ -204,17 +225,19 @@ def _rasterize_one(page, el: etree._Element, el_type: str, config) -> None:
             f"{el_html}</body></html>"
         )
         page.set_content(wrapper_html, timeout=config.timeout_seconds * 1000)
-        selector = el_type
-        element_handle = page.query_selector(selector)
+        element_handle = page.query_selector(el_type)
         if element_handle is None:
             return
         png_bytes = element_handle.screenshot(type="png")
         if not png_bytes:
             return
 
-        data_uri = _to_data_uri(png_bytes, "image/png")
+        fname = f"images/img-{len(image_items):04d}.png"
+        image_items[fname] = (png_bytes, "image/png")
+        stats.embedded += 1
+
         img = etree.Element("img")
-        img.set("src", data_uri)
+        img.set("src", fname)
         img.set("alt", f"Rendered {el_type}")
         img.set("style", "max-width:100%;height:auto;")
 
@@ -255,10 +278,6 @@ def _resolve_url(src: str, base_url: str) -> str:
         return src
     return urllib.parse.urljoin(base_url, src)
 
-
-def _to_data_uri(data: bytes, mime: str) -> str:
-    b64 = base64.b64encode(data).decode("ascii")
-    return f"data:{mime};base64,{b64}"
 
 
 def _replace_with_placeholder(el: etree._Element, src: str, reason: str) -> None:

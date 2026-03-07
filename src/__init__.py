@@ -23,6 +23,6 @@ def convert(url: str, config: ConversionConfig) -> bytes:
     if not body_html:
         raise ConversionError(f"Failed to extract article body from {url}")
 
-    body_html, image_stats = process_assets(body_html, url, config, used_browser)
-    epub_bytes = build_epub(body_html, metadata, image_stats, config)
+    body_html, image_stats, image_items = process_assets(body_html, url, config, used_browser)
+    epub_bytes = build_epub(body_html, metadata, image_stats, image_items, config)
     return epub_bytes
