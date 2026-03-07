@@ -1,0 +1,32 @@
+# Leafbound test suite — 15 URLs
+# Do not modify. If a URL goes dead, comment it out and flag it.
+# Categories: static-news, substack, medium, wikipedia-tables, svg, image-heavy, paywall
+
+# static-news (2)
+https://www.theguardian.com/technology/2026/mar/07/anthropic-claude-ai-pentagon-us-military
+https://www.bbc.com/news/articles/cvg50168ddgo
+
+# substack (2)
+https://substack.com/@theconsciouslee/p-189893829
+https://substack.com/@plumsykes/p-189386506
+
+# medium (2)
+https://lessig.medium.com/the-extortion-presidency-10423f5c5189
+https://medium.com/globetrotters/the-peace-of-empty-roads-f82b3ffc6ddf
+
+# wikipedia-tables (2)
+https://en.wikipedia.org/wiki/Comparison_of_e-book_formats
+https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(nominal)
+
+# svg (2)
+https://www.eisfunke.com/posts/2021/svg-the-good-the-bad-and-the-ugly.html
+https://ourworldindata.org/explorers/co2
+
+# image-heavy (2)
+https://www.nationalgeographic.com/environment/article/great-barrier-reef-coral-not-recovering-climate-change
+https://www.atlasobscura.com/places/the-giant-ghibli-clock-tokyo-japan
+
+# paywall — expected graceful failure, not crash (3)
+https://www.nytimes.com/2026/03/07/world/europe/russia-iran-oil-exports.html
+https://www.wsj.com/world/middle-east/iran-underground-missiles-59b3492c?mod=error_page_trendingnow_article_pos2
+https://www.ft.com/content/5a74c0f8-1cf2-4a6b-9339-a098fcbeb100
