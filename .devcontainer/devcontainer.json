@@ -32,8 +32,7 @@
                 "george-alisson.html-preview-vscode",
                 "PKief.material-icon-theme",
                 "ionutvmi.path-autocomplete",
-                "ms-vscode-remote.remote-containers",
-                "cweijan.epub-reader"
+                "ms-vscode-remote.remote-containers"
             ]
         }
     }
