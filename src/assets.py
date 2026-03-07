@@ -44,7 +44,7 @@ def process_assets(
     """
     stats = ImageStats()
     image_items: ImageItems = {}
-    tree = etree.fromstring(f"<div>{body_html}</div>".encode(), etree.HTMLParser())
+    tree = etree.fromstring(f"<div>{body_html}</div>".encode(), etree.HTMLParser(encoding="utf-8"))
     root = tree.find(".//body/div")
     if root is None:
         root = tree

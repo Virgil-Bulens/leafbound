@@ -28,6 +28,18 @@ code .
 
 The container build installs all dependencies and Chromium automatically. Expect the first build to take 3–5 minutes due to Playwright's Chromium binary. Subsequent builds are cached.
 
+Once inside the container, build the CLI:
+
+```bash
+uv pip install -e . --system --no-deps
+```
+
+Then add the Python bin directory to your PATH if `leafbound` is not found:
+
+```bash
+echo 'export PATH="/usr/local/python/3.12.13/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+```
+
 ---
 
 ## Usage
