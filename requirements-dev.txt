@@ -2,3 +2,21 @@ pytest==8.3.5
 pytest-mock==3.14.0
 responses==0.25.3
 pylint==3.0.1
+# pytest transitive deps
+iniconfig==2.3.0
+packaging==26.0
+pluggy==1.6.0
+# responses transitive deps
+pyyaml==6.0.3
+requests==2.32.5
+urllib3==2.6.3
+certifi==2026.2.25
+charset-normalizer==3.4.5
+idna==3.11
+# pylint transitive deps
+astroid==4.1.1
+dill==0.4.1
+isort==8.0.1
+mccabe==0.7.0
+platformdirs==4.9.4
+tomlkit==0.14.0
