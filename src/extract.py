@@ -12,6 +12,7 @@ from readability import Document
 logger = logging.getLogger(__name__)
 
 _MIN_BODY_WORDS = 200
+_HAS_IMG = re.compile(r"<(img|graphic)\b", re.IGNORECASE)
 
 
 @dataclass
@@ -20,6 +21,7 @@ class ArticleMetadata:
     author: str = ""
     date: str = ""
     description: str = ""
+    og_image: str = ""
     word_count: int = 0
 
 
@@ -56,6 +58,10 @@ def extract(html: str, url: str) -> Tuple[ArticleMetadata, Optional[str]]:
     metadata = _extract_metadata(html, url, readable_title)
     metadata.word_count = _word_count_html(body_html)
 
+    # If the body has no images, prepend the OG image as a hero
+    if metadata.og_image and not _HAS_IMG.search(body_html):
+        body_html = f'<img src="{metadata.og_image}" alt=""/>\n{body_html}'
+
     return metadata, body_html
 
 
@@ -77,6 +83,7 @@ def _extract_metadata(html: str, url: str, fallback_title: str) -> ArticleMetada
     og_author = _og(tree, "author") or _og(tree, "article:author")
     og_date = _og(tree, "article:published_time") or _og(tree, "article:modified_time")
     og_desc = _og(tree, "description")
+    og_image = _og(tree, "image")
 
     # 2. JSON-LD
     jld = _jsonld(tree)
@@ -106,6 +113,9 @@ def _extract_metadata(html: str, url: str, fallback_title: str) -> ArticleMetada
         or ""
     )
     meta.description = og_desc or std_desc or jld.get("description") or ""
+    meta.og_image = og_image or jld.get("image", {}).get("url", "") if isinstance(
+        jld.get("image"), dict
+    ) else og_image
 
     return meta
 
