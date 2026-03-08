@@ -30,3 +30,7 @@ https://www.atlasobscura.com/places/the-giant-ghibli-clock-tokyo-japan
 https://www.nytimes.com/2026/03/07/world/europe/russia-iran-oil-exports.html
 https://www.wsj.com/world/middle-east/iran-underground-missiles-59b3492c?mod=error_page_trendingnow_article_pos2
 https://www.ft.com/content/5a74c0f8-1cf2-4a6b-9339-a098fcbeb100
+
+# extra URLs
+https://hackernoon.com/evaluating-agentsmd-are-repository-level-context-files-helpful-for-coding-agents
+https://www.vrt.be/vrtnws/nl/2026/03/07/cuba-nadert-het-einde-en-zal-snel-onderhandelen-zegt-presiden/
