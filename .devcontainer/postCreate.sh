@@ -53,20 +53,12 @@ fi
 # claude shorthand: p <prompt>
 append_if_missing 'p() { claude -p "$*" --model claude-haiku-4-5-20251001 --output-format text; }' ~/.zshrc
 
-# uv
-uv pip install -r requirements.txt -r requirements-dev.txt --system --no-deps
+# uv — install with transitive deps so nothing is missing
+uv pip install -r requirements.txt -r requirements-dev.txt --system
 
-# Chromium system dependencies for Playwright
-apt-get install -y --no-install-recommends \
-    libglib2.0-0t64 libdbus-1-3 libatk1.0-0t64 libatk-bridge2.0-0t64 \
-    libcups2t64 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-    libgbm1 libxkbcommon0 libpango-1.0-0 libpangocairo-1.0-0 \
-    libcairo2 libcairo-gobject2 libasound2t64 libatspi2.0-0t64 \
-    2>/dev/null || true
-
-# Install Playwright Chromium browser and CLI entrypoint
-playwright install chromium
-uv pip install -e . --system --no-deps
+# Install Playwright Chromium browser + all OS-level dependencies it needs
+playwright install chromium --with-deps
+uv pip install -e . --system
 
 # Put Python bin on PATH so `leafbound` is found
 append_if_missing 'export PATH="/usr/local/python/3.12.13/bin:$PATH"' ~/.zshrc
