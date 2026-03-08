@@ -57,7 +57,7 @@ def _fetch_playwright(url: str, config: ConversionConfig) -> Optional[str]:
                     logger.debug("Bot page on pass 1, retrying with stealth for %s", url)
                     try:
                         from playwright_stealth import Stealth
-                        Stealth().use_sync(page)
+                        Stealth().apply_stealth_sync(page)
                     except ImportError:
                         logger.debug("playwright-stealth not installed, skipping stealth retry")
                     else:
