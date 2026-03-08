@@ -98,12 +98,13 @@ def _extract_metadata(html: str, url: str, fallback_title: str) -> ArticleMetada
     if h1_els:
         h1_text = "".join(h1_els[0].itertext()).strip()
 
-    meta.title = (
-        og_title
-        or jld.get("headline")
+    meta.title = _clean_title(
+        jld.get("headline")
         or jld.get("name")
+        or og_title
         or fallback_title
         or h1_text
+        or ""
     )
     meta.author = og_author or _jld_author(jld) or std_author
     meta.date = (
@@ -149,6 +150,16 @@ def _jsonld(tree: etree._Element) -> dict:
         except (json.JSONDecodeError, TypeError):
             continue
     return {}
+
+
+def _clean_title(title: str) -> str:
+    """Strip trailing site-name suffixes like ' | HackerNoon' or ' - BBC News'."""
+    for sep in (" | ", " — ", " – "):
+        if sep in title:
+            head, tail = title.rsplit(sep, 1)
+            if head and len(tail.split()) <= 4:
+                return head.strip()
+    return title
 
 
 def _jld_author(jld: dict) -> str:

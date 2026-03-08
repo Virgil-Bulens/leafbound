@@ -44,9 +44,10 @@ def test_extract_gets_og_author(simple_html):
     assert metadata.author == "Jane Doe"
 
 
-def test_extract_og_priority_over_jsonld():
+def test_extract_jsonld_priority_over_og():
+    # JSON-LD headline is preferred over og:title (og:title often has site-name suffix)
     metadata, _ = extract(ARTICLE_HTML, "https://example.com")
-    assert metadata.title == "OG Title"
+    assert metadata.title == "JSON-LD Headline"
 
 
 def test_extract_jsonld_author_fallback():

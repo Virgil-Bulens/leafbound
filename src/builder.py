@@ -65,7 +65,7 @@ def build_epub(
     book.toc = (epub.Link("article.xhtml", metadata.title or "Article", "article"),)
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
-    book.spine = ["nav", chapter]
+    book.spine = [("nav", "no"), chapter]
 
     import io
     buf = io.BytesIO()
