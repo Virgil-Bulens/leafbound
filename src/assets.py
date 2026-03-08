@@ -198,7 +198,9 @@ def _rasterize_elements(
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=config.headless)
             try:
-                page = browser.new_page(viewport={"width": 1200, "height": 800})
+                page = browser.new_page(
+                    viewport={"width": 1600, "height": 800}, device_scale_factor=2
+                )
                 for el, el_type in elements:
                     _rasterize_one(page, el, el_type, config, image_items, stats)
             finally:
@@ -233,6 +235,10 @@ def _rasterize_one(
             f"{el_html}</body></html>"
         )
         page.set_content(wrapper_html, timeout=config.timeout_seconds * 1000)
+        # Expand viewport to fit content width (prevents horizontal clipping on wide tables)
+        scroll_width = page.evaluate("document.body.scrollWidth")
+        if scroll_width > 1600:
+            page.set_viewport_size({"width": scroll_width + 32, "height": 800})
         element_handle = page.query_selector(el_type)
         if element_handle is None:
             if el_type == "svg":

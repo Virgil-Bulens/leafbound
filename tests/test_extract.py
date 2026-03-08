@@ -2,6 +2,7 @@
 from src.extract import (
     ArticleMetadata,
     _clean_title,
+    _inject_missing_tables,
     _is_bot_page,
     _is_paywall_page,
     _jsonld,
@@ -208,3 +209,49 @@ def test_is_paywall_page_not_triggered_long_body():
 def test_is_paywall_page_normal_article():
     body = "<p>This is a normal article about technology and innovation.</p>"
     assert not _is_paywall_page(body, 50)
+
+
+# --- _inject_missing_tables ---
+
+_WIKITABLE_HTML = """<html><body>
+<table class="wikitable sortable">
+  <thead><tr><th>Country</th><th>GDP</th></tr></thead>
+  <tbody><tr><td>USA</td><td>25000</td></tr></tbody>
+</table>
+</body></html>"""
+
+_NAV_TABLE_HTML = """<html><body>
+<table class="navbox">
+  <tr><td>Navigation</td></tr>
+</table>
+</body></html>"""
+
+
+def test_inject_missing_tables_appends_wikitable():
+    body = "<p>Article text.</p>"
+    result = _inject_missing_tables(body, _WIKITABLE_HTML)
+    assert "<table" in result
+    assert "wikitable" in result
+
+
+def test_inject_missing_tables_skips_nav_tables():
+    body = "<p>Article text.</p>"
+    result = _inject_missing_tables(body, _NAV_TABLE_HTML)
+    assert result == body
+
+
+def test_inject_missing_tables_no_duplication():
+    # Table already in body — should not be added again
+    from lxml import etree
+    tree = etree.fromstring(_WIKITABLE_HTML.encode(), etree.HTMLParser(encoding="utf-8"))
+    table_el = tree.find(".//table")
+    existing_table = etree.tostring(table_el, encoding="unicode", method="html")
+    body = f"<p>Text.</p>{existing_table}"
+    result = _inject_missing_tables(body, _WIKITABLE_HTML)
+    assert result.count("<table") == 1
+
+
+def test_inject_missing_tables_no_tables_in_raw():
+    body = "<p>Article text.</p>"
+    result = _inject_missing_tables(body, "<html><body><p>No tables here.</p></body></html>")
+    assert result == body

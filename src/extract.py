@@ -100,6 +100,9 @@ def extract(html: str, url: str) -> Tuple[ArticleMetadata, Optional[str]]:
     # Strip duplicate leading h1
     body_html = _strip_leading_h1(body_html, metadata.title)
 
+    # Re-inject data tables that readability stripped (e.g. Wikipedia wikitables)
+    body_html = _inject_missing_tables(body_html, html)
+
     # If the body has no images, prepend the OG image as a hero
     if metadata.og_image and not _HAS_IMG.search(body_html):
         body_html = f'<img src="{metadata.og_image}" alt=""/>\n{body_html}'
@@ -145,6 +148,41 @@ def _strip_leading_h1(body_html: str, title: str) -> str:
 
 def _normalise(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower()
+
+
+_DATA_TABLE_MARKERS = ("wikitable", "sortable", "datatable")
+
+
+def _inject_missing_tables(body_html: str, raw_html: str) -> str:
+    """Append data tables from raw HTML that readability stripped from the body.
+
+    Only tables whose class attribute contains a known data-table marker are
+    considered. Tables already present in the body (detected by a content
+    fingerprint) are skipped to avoid duplication.
+    """
+    try:
+        raw_tree = etree.fromstring(
+            raw_html.encode(), etree.HTMLParser(encoding="utf-8")
+        )
+    except Exception:
+        return body_html
+
+    body_compact = re.sub(r"\s+", "", body_html)
+    injected: list[str] = []
+
+    for table in raw_tree.findall(".//table"):
+        cls = table.get("class", "")
+        if not any(marker in cls for marker in _DATA_TABLE_MARKERS):
+            continue
+        table_html = etree.tostring(table, encoding="unicode", method="html")
+        fingerprint = re.sub(r"\s+", "", table_html[:120])[:60]
+        if fingerprint and fingerprint in body_compact:
+            continue
+        injected.append(table_html)
+
+    if injected:
+        body_html = body_html + "\n" + "\n".join(injected)
+    return body_html
 
 
 def _extract_metadata(html: str, url: str, fallback_title: str) -> ArticleMetadata:
