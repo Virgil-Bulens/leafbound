@@ -204,9 +204,17 @@ def _rasterize_elements(
             finally:
                 browser.close()
     except Exception as exc:
-        logger.debug("Rasterization error: %s", exc)
+        logger.debug("Rasterization unavailable: %s", exc)
+        # Playwright not available — SVGs are not renderable by e-readers, remove them
+        for el, el_type in elements:
+            if el_type == "svg":
+                _remove_element(el)
 
     return root
+
+
+# Minimum PNG size for a screenshot to be considered non-blank
+_MIN_RASTER_BYTES = 4096
 
 
 def _rasterize_one(
@@ -227,9 +235,15 @@ def _rasterize_one(
         page.set_content(wrapper_html, timeout=config.timeout_seconds * 1000)
         element_handle = page.query_selector(el_type)
         if element_handle is None:
+            if el_type == "svg":
+                _remove_element(el)
             return
         png_bytes = element_handle.screenshot(type="png")
-        if not png_bytes:
+
+        # Blank/empty screenshot — SVG has no visual content
+        if not png_bytes or len(png_bytes) < _MIN_RASTER_BYTES:
+            if el_type == "svg":
+                _remove_element(el)
             return
 
         fname = f"images/img-{len(image_items):04d}.png"
@@ -238,7 +252,7 @@ def _rasterize_one(
 
         img = etree.Element("img")
         img.set("src", fname)
-        img.set("alt", f"Rendered {el_type}")
+        img.set("alt", "")
         img.set("style", "max-width:100%;height:auto;")
 
         parent = el.getparent()
@@ -248,6 +262,14 @@ def _rasterize_one(
             parent.insert(idx, img)
     except Exception as exc:
         logger.debug("Failed to rasterize %s: %s", el_type, exc)
+        if el_type == "svg":
+            _remove_element(el)
+
+
+def _remove_element(el: etree._Element) -> None:
+    parent = el.getparent()
+    if parent is not None:
+        parent.remove(el)
 
 
 def _fetch_image(url: str) -> Optional[Tuple[bytes, str]]:

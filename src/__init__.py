@@ -21,7 +21,16 @@ def convert(url: str, config: ConversionConfig) -> bytes:
 
     metadata, body_html = extract(html, url)
     if not body_html:
-        raise ConversionError(f"Failed to extract article body from {url}")
+        if metadata.title == "__paywall__":
+            raise ConversionError(
+                "Paywall detected — article content not accessible without authentication."
+            )
+        raise ConversionError(
+            "Bot-detection or challenge page returned — "
+            "site may require authentication or block automated access."
+            if metadata.title == ""
+            else f"Failed to extract article body from {url}"
+        )
 
     body_html, image_stats, image_items = process_assets(body_html, url, config, used_browser)
     epub_bytes = build_epub(body_html, metadata, image_stats, image_items, config)
