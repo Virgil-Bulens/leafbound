@@ -58,6 +58,8 @@ uv pip install -r requirements.txt -r requirements-dev.txt --system
 
 # Install Playwright Chromium browser + all OS-level dependencies it needs
 playwright install chromium --with-deps
+
+# Install the package in editable mode so that changes to the code are reflected immediately without needing to reinstall
 uv pip install -e . --system
 
 # Put Python bin on PATH so `leafbound` is found
