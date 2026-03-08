@@ -63,7 +63,7 @@ All versions pinned in `requirements.txt`. Do not add dependencies without updat
 
 ## Dev Container
 
-Base image: `mcr.microsoft.com/devcontainers/base:debian-13`
+Base image: `mcr.microsoft.com/devcontainers/base:ubuntu-24.04`
 
 Uses features for setup:
 - Python 3.12 (`ghcr.io/devcontainers/features/python`)
