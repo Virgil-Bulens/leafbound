@@ -86,7 +86,8 @@ def _playwright_navigate(page, url: str, config: ConversionConfig) -> Optional[s
 
 def _looks_like_bot_page(html: str) -> bool:
     """Quick heuristic: is this HTML a bot-detection challenge page?"""
-    word_count = len(trafilatura.extract(html).split()) if trafilatura.extract(html) else 0
+    text = trafilatura.extract(html) or ""
+    word_count = len(text.split())
     return word_count < 200 and bool(_BOT_TITLE_RE.search(html))
 
 
