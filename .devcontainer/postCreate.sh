@@ -56,8 +56,11 @@ append_if_missing 'p() { claude -p "$*" --model claude-haiku-4-5-20251001 --outp
 # uv — install with transitive deps so nothing is missing
 uv pip install -r requirements.txt -r requirements-dev.txt --system
 
-# Install Playwright Chromium browser + all OS-level dependencies it needs
-playwright install chromium --with-deps
+# Install Playwright Chromium browser + OS-level dependencies.
+# On Debian 13, ttf-unifont and ttf-ubuntu-font-family were renamed; pre-install
+# the replacements so playwright install-deps doesn't abort on missing font packages.
+apt-get install -y fonts-unifont 2>/dev/null || true
+playwright install chromium --with-deps || playwright install chromium
 
 # Install the package in editable mode so that changes to the code are reflected immediately without needing to reinstall
 uv pip install -e . --system
