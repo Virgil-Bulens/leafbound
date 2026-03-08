@@ -38,6 +38,12 @@ def build_epub(
 
     book.add_metadata("DC", "subject", reading_time_str)
     book.add_metadata(None, "meta", "", {"name": "reading-time", "content": reading_time_str})
+    book.add_metadata(
+        None, "meta", "", {"name": "images-embedded", "content": str(image_stats.embedded)}
+    )
+    book.add_metadata(
+        None, "meta", "", {"name": "images-placeholders", "content": str(image_stats.placeholders)}
+    )
 
     css_content = _default_css()
     css_item = epub.EpubItem(
@@ -168,6 +174,7 @@ def output_filename(metadata: ArticleMetadata) -> str:
     if metadata.title:
         slug = re.sub(r"\s+", "-", metadata.title.lower())
         slug = re.sub(r"[^a-z0-9\-]", "", slug)
+        slug = re.sub(r"-{2,}", "-", slug)
         slug = slug[:80].strip("-")
         if slug:
             return f"{slug}.epub"
