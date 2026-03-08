@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 import trafilatura
 
 from .config import ConversionConfig
+from .extract import _BOT_TITLE_RE
 
 logger = logging.getLogger(__name__)
 
@@ -43,27 +44,50 @@ def _fetch_trafilatura(url: str) -> Optional[str]:
 
 def _fetch_playwright(url: str, config: ConversionConfig) -> Optional[str]:
     try:
-        from playwright.sync_api import TimeoutError as PlaywrightTimeout
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=config.headless)
             try:
                 page = browser.new_page()
-                page.goto(url, wait_until="networkidle", timeout=config.timeout_seconds * 1000)
-                html = page.content()
+                # Pass 1: navigate without stealth overhead
+                html = _playwright_navigate(page, url, config)
+                # Pass 2: if we got a bot-challenge page, retry with stealth patches
+                if html and _looks_like_bot_page(html):
+                    logger.debug("Bot page on pass 1, retrying with stealth for %s", url)
+                    try:
+                        from playwright_stealth import stealth_sync
+                        stealth_sync(page)
+                    except ImportError:
+                        logger.debug("playwright-stealth not installed, skipping stealth retry")
+                    else:
+                        html = _playwright_navigate(page, url, config)
                 return html
-            except PlaywrightTimeout:
-                logger.debug("Playwright timed out for %s", url)
-                try:
-                    return page.content()
-                except Exception:
-                    return None
             finally:
                 browser.close()
     except Exception as exc:
         logger.debug("Playwright error for %s: %s", url, exc)
         return None
+
+
+def _playwright_navigate(page, url: str, config: ConversionConfig) -> Optional[str]:
+    """Navigate to URL and return page HTML, handling timeout gracefully."""
+    try:
+        from playwright.sync_api import TimeoutError as PlaywrightTimeout
+        page.goto(url, wait_until="networkidle", timeout=config.timeout_seconds * 1000)
+        return page.content()
+    except PlaywrightTimeout:
+        logger.debug("Playwright timed out for %s", url)
+        try:
+            return page.content()
+        except Exception:
+            return None
+
+
+def _looks_like_bot_page(html: str) -> bool:
+    """Quick heuristic: is this HTML a bot-detection challenge page?"""
+    word_count = len(trafilatura.extract(html).split()) if trafilatura.extract(html) else 0
+    return word_count < 200 and bool(_BOT_TITLE_RE.search(html))
 
 
 def _word_count(html: str) -> int:
