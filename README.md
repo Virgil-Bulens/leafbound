@@ -147,8 +147,9 @@ Add it to `requirements.txt` and rebuild the container. Do not install packages 
 |---|---|
 | Phase 1 | Local CLI (current) |
 | Phase 2 | Web service — HTTP API wrapping the conversion core |
-| Phase 3 | Browser extension — Chrome DOM extraction, delegates conversion to Phase 2 API |
-| Phase 4 | Mobile app — share sheet integration, delegates to Phase 2 API |
+| Phase 3 | Push generated ePubs to popular platforms (Boox, Kobo, Kindle), starting with Boox |
+| Phase 4 | Browser extension — Chrome DOM extraction, delegates conversion to Phase 2 API |
+| Phase 5 | Mobile app — share sheet integration, delegates to Phase 2 API |
 
 The conversion core (`src/` library) is deliberately isolated from I/O so that Phases 2–4 wrap it without modification.
 
