@@ -41,8 +41,11 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     url="$line"
     echo "[$total] $url"
 
-    output=$(leafbound "$url" --output "$OUTPUT_DIR" --timeout "$TIMEOUT" 2>&1)
-    exit_code=$?
+    if output=$(leafbound "$url" --output "$OUTPUT_DIR" --timeout "$TIMEOUT" 2>&1); then
+        exit_code=0
+    else
+        exit_code=$?
+    fi
 
     if [[ $exit_code -eq 0 ]]; then
         echo "$output"
